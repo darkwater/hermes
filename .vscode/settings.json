@@ -1,3 +1,38 @@
 {
-    "editor.formatOnSave": true
+    "editor.formatOnSave": true,
+    "evenBetterToml.formatter.arrayAutoExpand": false,
+    "evenBetterToml.formatter.compactArrays": false,
+    "evenBetterToml.rules": [
+        {
+            "keys": [
+                "dependencies",
+                "*.dependencies",
+                "dev-dependencies",
+                "*.dev-dependencies",
+                "build-dependencies",
+                "*.build-dependencies",
+                "patch",
+                "patch.*",
+            ],
+            "formatting": {
+                "reorder_keys": true,
+            }
+        },
+        {
+            "keys": [
+                "dependencies",
+                "*.dependencies",
+                "dev-dependencies",
+                "*.dev-dependencies",
+                "build-dependencies",
+                "*.build-dependencies",
+                "patch",
+                "patch.*",
+                "features",
+            ],
+            "formatting": {
+                "align_entries": true,
+            }
+        }
+    ],
 }
