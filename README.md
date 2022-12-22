@@ -45,5 +45,9 @@ Usage
 -----
 
 ```bash
+# Send a message to the configured chat
 $ hermes send "Hello, world!"
+
+# Send a message with a button, and wait until someone presses it
+$ hermes wait "It's Monday morning! Upgrade the server?" "Yes!" && apt upgrade
 ```
