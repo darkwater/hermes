@@ -9,8 +9,9 @@ edition = "2021"
 anyhow = "1.0.68"
 clap = { version = "4.0.30", features = ["derive"] }
 config = "0.13.3"
+dirs = "4.0.0"
 log = "0.4.17"
 pretty_env_logger = "0.4.0"
 serde = { version = "1.0.151", features = ["derive"] }
-teloxide = "0.11.3"
+teloxide = { version = "0.11.3", features = ["rustls", "ctrlc_handler", "auto-send"], default-features = false }
 tokio = { version = "1.23.0", features = ["macros", "rt-multi-thread"] }
