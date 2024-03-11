@@ -4,9 +4,10 @@ use teloxide::{
     dispatching::dialogue::GetChatId,
     payloads::{GetUpdatesSetters, SendMessageSetters},
     requests::{Request, Requester},
-    types::{AllowedUpdate, ChatId, InlineKeyboardButton, InlineKeyboardMarkup},
+    types::{AllowedUpdate, ChatId, InlineKeyboardButton, InlineKeyboardMarkup, UpdateKind::CallbackQuery},
     Bot,
 };
+use std::process::ExitCode;
 
 use crate::config::load_config;
 
@@ -36,8 +37,8 @@ pub enum Command {
         /// Message to send
         message: String,
 
-        /// Text on the button
-        button: String,
+        /// Text on the buttons
+        buttons: Vec<String>,
 
         #[clap(short, long, default_value = "3600")]
         timeout: u32,
@@ -45,7 +46,12 @@ pub enum Command {
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<ExitCode> {
+    inner()
+    .await
+    .or(Ok(ExitCode::from(u8::MAX)))
+}
+async fn inner() -> Result<ExitCode> {
     pretty_env_logger::init();
 
     let args = Args::parse();
@@ -61,8 +67,11 @@ async fn main() -> Result<()> {
                 .await
                 .context("Failed to send message")?;
         }
-        Command::Wait { message, button, timeout } => {
-            let keyboard = [[InlineKeyboardButton::callback(button, "button")]];
+        Command::Wait { message, buttons, timeout } => {
+            let mut keyboard = Vec::new();//[[InlineKeyboardButton::callback(button, "button")]];
+            for (i, button) in buttons.iter().enumerate() {
+                keyboard.push([InlineKeyboardButton::callback(button, i.to_string())]);
+            }
 
             if let Some(update) = bot
                 .get_updates()
@@ -108,6 +117,7 @@ async fn main() -> Result<()> {
                 bail!("Timed out waiting for button press")
             };
 
+
             bot.get_updates()
                 .offset(update.id + 1)
                 .allowed_updates(vec![AllowedUpdate::CallbackQuery])
@@ -119,8 +129,16 @@ async fn main() -> Result<()> {
                 .send()
                 .await
                 .context("Failed to edit message after press")?;
+
+            let CallbackQuery(cb_data) = update.kind else {
+                unreachable!();
+            };
+
+            let return_code = cb_data.data.map(|i| i.parse::<u8>().ok().unwrap_or(u8::MAX) ).unwrap();
+
+            return Ok(ExitCode::from(return_code))
         }
     }
 
-    Ok(())
+    Ok(ExitCode::from(0))
 }

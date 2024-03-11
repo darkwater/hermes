@@ -49,5 +49,6 @@ Usage
 $ hermes send "Hello, world!"
 
 # Send a message with a button, and wait until someone presses it
-$ hermes wait "It's Monday morning! Upgrade the server?" "Yes!" && apt upgrade
+# Returns 0 on first button press, 1 on second button, etc
+$ hermes wait "It's Monday morning! Upgrade the server?" "Yes!" "No." && apt upgrade
 ```
