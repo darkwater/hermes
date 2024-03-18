@@ -47,9 +47,10 @@ pub enum Command {
 
 #[tokio::main]
 async fn main() -> Result<ExitCode> {
-    inner()
-    .await
-    .or(Ok(ExitCode::from(u8::MAX)))
+    match inner().await {
+        Ok(v) => Ok(v),
+        Err(e) => {eprintln!("{:?}", e); Ok(ExitCode::from(u8::MAX))}
+    }
 }
 async fn inner() -> Result<ExitCode> {
     pretty_env_logger::init();
