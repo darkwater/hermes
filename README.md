@@ -50,4 +50,10 @@ $ hermes send "Hello, world!"
 
 # Send a message with a button, and wait until someone presses it
 $ hermes wait "It's Monday morning! Upgrade the server?" "Yes!" && apt upgrade
+
+# Send a message with a button, and only wait up to the specified timeout
+$ hermes wait "It's Monday morning! Upgrade the server? Answer quickly!" "Yes!" --timeout=60 && apt upgrade
+
+# Send a message with multiple buttons, wait until someone presses it, and print the number of the pressed button
+$ [[ $(hermes wait "It's Monday morning! Upgrade the server?" "Yes!" "No!") == "0" ]] && apt upgrade
 ```
