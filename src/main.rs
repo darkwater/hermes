@@ -1,7 +1,7 @@
+use teloxide::RequestError::Network;
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 use teloxide::{
-    dispatching::dialogue::GetChatId,
     payloads::{GetUpdatesSetters, SendMessageSetters},
     requests::{Request, Requester},
     types::{AllowedUpdate, ChatId, InlineKeyboardButton, InlineKeyboardMarkup},
@@ -87,12 +87,18 @@ async fn main() -> Result<()> {
                 .await
                 .context("Failed to send message")?;
 
-            let update = bot
-                .get_updates()
-                .timeout(timeout)
-                .allowed_updates(vec![AllowedUpdate::CallbackQuery])
-                .send()
-                .await
+            let update = loop {
+                    let update_tmp = bot
+                    .get_updates()
+                    .timeout(timeout)
+                    .allowed_updates(vec![AllowedUpdate::CallbackQuery])
+                    .send()
+                    .await;
+                    match update_tmp {
+                        Err(Network(ref e)) if e.is_timeout() => continue,
+                        _ => break update_tmp
+                    };
+                }
                 .context("Failed to get updates")?
                 .into_iter()
                 .find(|update| {
