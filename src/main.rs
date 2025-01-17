@@ -1,7 +1,7 @@
+use teloxide::RequestError::Network;
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 use teloxide::{
-    dispatching::dialogue::GetChatId,
     payloads::{GetUpdatesSetters, SendMessageSetters},
     requests::{Request, Requester},
     types::{AllowedUpdate, ChatId, InlineKeyboardButton, InlineKeyboardMarkup},
@@ -37,7 +37,7 @@ pub enum Command {
         message: String,
 
         /// Text on the button
-        button: String,
+        button: Vec<String>,
 
         #[clap(short, long, default_value = "3600")]
         timeout: u32,
@@ -62,7 +62,10 @@ async fn main() -> Result<()> {
                 .context("Failed to send message")?;
         }
         Command::Wait { message, button, timeout } => {
-            let keyboard = [[InlineKeyboardButton::callback(button, "button")]];
+            let keyboard = button
+                .iter()
+                .enumerate()
+                .map(|(i, button): (usize, &String)| [InlineKeyboardButton::callback(button, format!("{}", i))]);
 
             if let Some(update) = bot
                 .get_updates()
@@ -87,16 +90,28 @@ async fn main() -> Result<()> {
                 .await
                 .context("Failed to send message")?;
 
-            let update = bot
-                .get_updates()
-                .timeout(timeout)
-                .allowed_updates(vec![AllowedUpdate::CallbackQuery])
-                .send()
-                .await
+            let update = loop {
+                    let update_tmp = bot
+                    .get_updates()
+                    .timeout(timeout)
+                    .allowed_updates(vec![AllowedUpdate::CallbackQuery])
+                    .send()
+                    .await;
+                    match update_tmp {
+                        Err(Network(ref e)) if e.is_timeout() => continue,
+                        _ => break update_tmp
+                    };
+                }
                 .context("Failed to get updates")?
                 .into_iter()
                 .find(|update| {
-                    matches!(update.kind, teloxide::types::UpdateKind::CallbackQuery(_))
+                    match &update.kind {
+                        teloxide::types::UpdateKind::CallbackQuery(q) => {
+                            println!("{}", q.data.clone().expect("How?").as_str());
+                            true
+                        },
+                        _ => false,
+                    }
                 });
 
             let Some(update) = update else {
