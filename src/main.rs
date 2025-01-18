@@ -1,6 +1,6 @@
-use teloxide::RequestError::Network;
 use anyhow::{bail, Context, Result};
 use clap::Parser;
+use teloxide::RequestError::Network;
 use teloxide::{
     payloads::{GetUpdatesSetters, SendMessageSetters},
     requests::{Request, Requester},
@@ -65,7 +65,9 @@ async fn main() -> Result<()> {
             let keyboard = button
                 .iter()
                 .enumerate()
-                .map(|(i, button): (usize, &String)| [InlineKeyboardButton::callback(button, format!("{}", i))]);
+                .map(|(i, button): (usize, &String)| {
+                    [InlineKeyboardButton::callback(button, format!("{}", i))]
+                });
 
             if let Some(update) = bot
                 .get_updates()
@@ -91,34 +93,36 @@ async fn main() -> Result<()> {
                 .context("Failed to send message")?;
 
             let update = loop {
-                    let update_tmp = bot
+                let update_tmp = bot
                     .get_updates()
                     .timeout(timeout)
                     .allowed_updates(vec![AllowedUpdate::CallbackQuery])
                     .send()
                     .await;
-                    match update_tmp {
-                        Err(Network(ref e)) if e.is_timeout() => continue,
-                        _ => break update_tmp
-                    };
+                match update_tmp {
+                    Err(Network(ref e)) if e.is_timeout() => continue,
+                    _ => break update_tmp,
+                };
+            }
+            .context("Failed to get updates")?
+            .into_iter()
+            .find(|update| match &update.kind {
+                teloxide::types::UpdateKind::CallbackQuery(q) => {
+                    println!("{}", q.data.clone().expect("How?").as_str());
+                    true
                 }
-                .context("Failed to get updates")?
-                .into_iter()
-                .find(|update| {
-                    match &update.kind {
-                        teloxide::types::UpdateKind::CallbackQuery(q) => {
-                            println!("{}", q.data.clone().expect("How?").as_str());
-                            true
-                        },
-                        _ => false,
-                    }
-                });
+                _ => false,
+            });
 
             let Some(update) = update else {
-                bot.edit_message_text(sent_message.chat.id, sent_message.id, message + "\n\n(expired)")
-                    .send()
-                    .await
-                    .context("Failed to edit message after press")?;
+                bot.edit_message_text(
+                    sent_message.chat.id,
+                    sent_message.id,
+                    message + "\n\n(expired)",
+                )
+                .send()
+                .await
+                .context("Failed to edit message after press")?;
 
                 bail!("Timed out waiting for button press")
             };
