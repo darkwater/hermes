@@ -1,5 +1,7 @@
 use anyhow::{bail, Context, Result};
 use clap::Parser;
+use teloxide::payloads::SendPhotoSetters;
+use teloxide::types::{InputFile, InputMedia, InputMediaPhoto};
 use teloxide::RequestError::Network;
 use teloxide::{
     payloads::{GetUpdatesSetters, SendMessageSetters},
@@ -27,8 +29,12 @@ pub struct Args {
 pub enum Command {
     /// Send a single message to the configured chat
     Send {
+        #[clap(short, long)]
+        /// Optional path to an image to attach. Can be specified multiple times
+        image: Vec<String>,
+
         /// Message to send
-        message: String,
+        message: Option<String>,
     },
 
     /// Show a prompt and wait for a button press
@@ -55,12 +61,38 @@ async fn main() -> Result<()> {
     let bot = Bot::new(config.token);
 
     match args.command {
-        Command::Send { message } => {
-            bot.send_message(ChatId(config.chat_id), message)
+        Command::Send { image, mut message } => match image.as_slice() {
+            [] => {
+                if let Some(message) = message {
+                    bot.send_message(ChatId(config.chat_id), message)
+                        .send()
+                        .await
+                        .context("Failed to send message")?;
+                } else {
+                    bail!("Nothing to send")
+                }
+            }
+            [image] => {
+                bot.send_photo(ChatId(config.chat_id), InputFile::file(image))
+                    .caption(message.unwrap_or_default()) // XXX: is empty string the same as None?
+                    .send()
+                    .await
+                    .context("Failed to send images")?;
+            }
+            images @ [..] => {
+                bot.send_media_group(
+                    ChatId(config.chat_id),
+                    images.iter().map(|image| {
+                        let mut photo = InputMediaPhoto::new(InputFile::file(image));
+                        photo.caption = message.take();
+                        InputMedia::Photo(photo)
+                    }),
+                )
                 .send()
                 .await
-                .context("Failed to send message")?;
-        }
+                .context("Failed to send images")?;
+            }
+        },
         Command::Wait { message, button, timeout } => {
             let keyboard = button
                 .iter()
