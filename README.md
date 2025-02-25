@@ -48,6 +48,12 @@ Usage
 # Send a message to the configured chat
 $ hermes send "Hello, world!"
 
+# Send an image to the configured chat
+$ hermes send --image img.png
+
+# Send multiple images to the configured chat
+$ hermes send "Here's your daily pet pictures" --image $(ls ~/cat_pics | shuf -n 1) --image $(ls ~/dog_pics | shuf -n 1)
+
 # Send a message with a button, and wait until someone presses it
 $ hermes wait "It's Monday morning! Upgrade the server?" "Yes!" && apt upgrade
 
