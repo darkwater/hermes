@@ -1,6 +1,6 @@
 use anyhow::{bail, Context, Result};
 use clap::Parser;
-use teloxide::payloads::SendPhotoSetters;
+use teloxide::payloads::{SendMediaGroupSetters as _, SendPhotoSetters};
 use teloxide::types::{InputFile, InputMedia, InputMediaPhoto};
 use teloxide::RequestError::Network;
 use teloxide::{
@@ -29,8 +29,12 @@ pub struct Args {
 pub enum Command {
     /// Send a single message to the configured chat
     Send {
+        /// Sends the message silently. Users will receive a notification with no sound
         #[clap(short, long)]
+        silent: bool,
+
         /// Optional path to an image to attach. Can be specified multiple times
+        #[clap(short, long)]
         image: Vec<String>,
 
         /// Message to send
@@ -39,6 +43,10 @@ pub enum Command {
 
     /// Show a prompt and wait for a button press
     Wait {
+        /// Sends the message silently. Users will receive a notification with no sound
+        #[clap(short, long)]
+        silent: bool,
+
         /// Message to send
         message: String,
 
@@ -61,10 +69,11 @@ async fn main() -> Result<()> {
     let bot = Bot::new(config.token);
 
     match args.command {
-        Command::Send { image, mut message } => match image.as_slice() {
+        Command::Send { silent, image, mut message } => match image.as_slice() {
             [] => {
                 if let Some(message) = message {
                     bot.send_message(ChatId(config.chat_id), message)
+                        .disable_notification(silent)
                         .send()
                         .await
                         .context("Failed to send message")?;
@@ -74,6 +83,7 @@ async fn main() -> Result<()> {
             }
             [image] => {
                 bot.send_photo(ChatId(config.chat_id), InputFile::file(image))
+                    .disable_notification(silent)
                     .caption(message.unwrap_or_default()) // XXX: is empty string the same as None?
                     .send()
                     .await
@@ -88,12 +98,13 @@ async fn main() -> Result<()> {
                         InputMedia::Photo(photo)
                     }),
                 )
+                .disable_notification(silent)
                 .send()
                 .await
                 .context("Failed to send images")?;
             }
         },
-        Command::Wait { message, button, timeout } => {
+        Command::Wait { silent, message, button, timeout } => {
             let keyboard = button
                 .iter()
                 .enumerate()
@@ -120,6 +131,7 @@ async fn main() -> Result<()> {
             let sent_message = bot
                 .send_message(ChatId(config.chat_id), message.clone())
                 .reply_markup(InlineKeyboardMarkup::new(keyboard))
+                .disable_notification(silent)
                 .send()
                 .await
                 .context("Failed to send message")?;
