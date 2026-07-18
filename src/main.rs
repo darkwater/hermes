@@ -122,7 +122,7 @@ async fn main() -> Result<()> {
                 .last()
             {
                 bot.get_updates()
-                    .offset(update.id + 1)
+                    .offset(update.id.0 as i32 + 1)
                     .send()
                     .await
                     .context("Failed to clear queue in advance")?;
@@ -172,7 +172,7 @@ async fn main() -> Result<()> {
             };
 
             bot.get_updates()
-                .offset(update.id + 1)
+                .offset(update.id.0 as i32 + 1)
                 .allowed_updates(vec![AllowedUpdate::CallbackQuery])
                 .send()
                 .await
